@@ -1,13 +1,12 @@
-import { Handle, Position } from "reactflow";
+import { Handle, Position, useReactFlow } from "reactflow";
 import { Node } from "./Node";
 
 function NormalNode(props) {
-  console.log(props);
-  const { targetPosition, sourcePosition } = props;
+  const { targetPosition, sourcePosition, id = "" } = props;
   return (
     <Node style={{ background: "red" }}>
       <Handle position={Position[targetPosition]} type="target" />
-      A
+      {id.toUpperCase()}
       <Handle position={Position[sourcePosition]} type="source" />
     </Node>
   );
