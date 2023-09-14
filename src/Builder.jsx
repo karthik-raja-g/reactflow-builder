@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import BranchNode from "./components/BranchNode";
 import AddNode from "./components/AddNode";
 import NormalNode from "./components/NormalNode";
-import ReactFlow, { Background, Controls, useReactFlow } from "reactflow";
+import ReactFlow, { Background, Controls } from "reactflow";
 import dagre from "dagre";
 const nodeWidth = 100;
 const nodeHeight = 50;
@@ -12,7 +12,12 @@ const customNodes = {
   branchNode: BranchNode,
 };
 
-const counter = (() => {
+const addNodeCounter = (() => {
+  let count = 0;
+  return () => (count += 1);
+})();
+
+const newNodeCounter = (() => {
   let count = 0;
   return () => (count += 1);
 })();
@@ -46,7 +51,7 @@ const initialNodes = [
   {
     id: "d",
     data: { label: "World" },
-    type: "normalNode",
+    type: "addNode",
   },
 ];
 
@@ -99,7 +104,7 @@ const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
 function replaceWithAddNode(node) {
   const inEdges = dagreGraph.inEdges(node);
   const nodeInfo = dagreGraph.node(node);
-  const nodeId = `add$${counter()}`;
+  const nodeId = `add$${addNodeCounter()}`;
   const newNode = {
     id: nodeId,
     type: "addNode",
@@ -133,7 +138,6 @@ function removeAllChildren(node) {
 const Builder = () => {
   const [nodes, setNodes] = useState(layoutedNodes);
   const [edges, setEdges] = useState(layoutedEdges);
-  const ctx = useReactFlow();
   const handleDelete = (id) => {
     const { newNode, newEdge } = replaceWithAddNode(id);
     const res = removeAllChildren(id);
@@ -160,32 +164,73 @@ const Builder = () => {
     });
     console.log({ newNodes, newEdges });
     console.log({ nd: res.nodes(), ed: res.edges(), edc: res.edgeCount() });
-    // setNodes(newNodes);
-    // setEdges(newEdges);
+    dagreGraph.setNode(newNode.id);
+    dagreGraph.setEdge(newEdge.source, newEdge.target);
     setNodes([...newNodes, newNode]);
     setEdges([...newEdges, newEdge]);
-    // console.log({ nodes: dagreGraph.node("b"), src: dagreGraph.sinks() });
-  };
-
-  const handleAdd = () => {
-    ctx.addNodes({ id: "test", data: { label: "World" }, type: "normalNode" });
-    ctx.addEdges({ source: "a", target: "c" });
+    // const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+    //   [...newNodes, newNode],
+    //   [...newEdges, newEdge]
+    // );
+    // console.log({layoutedNodes, layoutedEdges})
+    // setNodes(layoutedNodes);
+    // setEdges(layoutedEdges);
   };
 
   const listener = (info) => {
+    const { id, type } = info.detail;
+    const nodeInfo = dagreGraph.node(id);
+    console.log({ nodeInfo });
+    const inEdges = dagreGraph.inEdges(id);
+    // construct the new node and edge
+    const newNodeId = `node$${newNodeCounter()}`;
+    const node = {
+      id: newNodeId,
+      type,
+      position: {
+        x: nodeInfo.x,
+        y: nodeInfo.y,
+      },
+      sourcePosition: "Bottom",
+      targetPosition: "Top",
+    };
+    const edge = {
+      source: inEdges[0].v,
+      target: newNodeId,
+      id: `${inEdges[0].v}-${newNodeId}`,
+      type: "smoothstep",
+    };
+    // update the existing node and edge with new ones
+    dagreGraph.removeNode(id);
+    dagreGraph.removeEdge(inEdges[0].v, inEdges[0].w);
+    dagreGraph.setNode(node.id);
+    dagreGraph.setEdge(inEdges[0].v, newNodeId);
+    const filteredNodes = nodes.filter((node) => node.id !== id);
+    const filteredEdges = edges.filter(
+      (edge) => edge.id !== `${inEdges[0].v}-${id}`
+    );
+
+    console.log({ filteredEdges, filteredNodes });
+    setNodes([...filteredNodes, node]);
+    setEdges([...filteredEdges, edge]);
+    // add a new addNode under the new node
+
     console.log(info);
+    console.log({ nodes: dagreGraph.nodes(), edges: dagreGraph.edges() });
   };
 
   useEffect(() => {
-    console.log({nodes, edges})
-  },[nodes,edges])
+    console.log({ nodes, edges });
+  }, [nodes, edges]);
+
   useEffect(() => {
     window.addEventListener("add-node", listener);
     return () => window.removeEventListener("add-node", listener);
   }, []);
+
   return (
     <div style={{ height: "100vh", width: "100vw" }}>
-      <button onClick={() => handleDelete("c")}>Delete</button>
+      <button onClick={() => handleDelete("b")}>Delete</button>
       <ReactFlow nodeTypes={customNodes} edges={edges} nodes={nodes} fitView>
         <Background />
         <Controls position="bottom-right" />

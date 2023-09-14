@@ -30,15 +30,15 @@ function AddNode(props) {
     let detail = { id, type: "normal" };
     switch (e.target.dataset.op) {
       case "1": {
-        detail.type = "normal";
+        detail.type = "normalNode";
         break;
       }
       case "2": {
-        detail.type = "branch";
+        detail.type = "branchNode";
         break;
       }
       case "3": {
-        detail.type = "end";
+        detail.type = "endNode";
         break;
       }
     }
